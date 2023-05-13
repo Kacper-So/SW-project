@@ -21,6 +21,8 @@ def main():
         incremental_char_spaceing = 0
         for j in range(8):
             part = img[i * part_height:(i + 1) * part_height, incremental_char_spaceing + (j * part_width):incremental_char_spaceing + ((j + 1) * part_width)]
+            part = cv2.resize(part, (225,150))
+            part = cv2.cvtColor(part, cv2.COLOR_BGR2GRAY)
             char_img_parts.append(part)
             incremental_char_spaceing = incremental_char_spaceing + char_spaceing
 

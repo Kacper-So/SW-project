@@ -5,7 +5,6 @@ import imutils
 def perform_processing(image: np.ndarray, character_dict: dict) -> str:
     print(f'image.shape: {image.shape}')
     # TODO: add image processing here
-
     img = image
     img = cv2.resize(img, (800,600))
     img_og = img.copy()
@@ -69,8 +68,121 @@ def perform_processing(image: np.ndarray, character_dict: dict) -> str:
     dst = np.array([[0, 0], [900 - 1, 0], [900 - 1, 600 - 1], [0, 600 -1]], dtype=np.float32)
     Matrix = cv2.getPerspectiveTransform(src, dst)
     plate_lower = cv2.warpPerspective(part_og, Matrix, (900, 600))
-    cv2.imshow("first_variant", plate_straight)
-    cv2.imshow('second_variant', plate_upper)
-    cv2.imshow('third_variant', plate_lower)
+    # cv2.imshow("first_variant", plate_straight)
+    # cv2.imshow('second_variant', plate_upper)
+    # cv2.imshow('third_variant', plate_lower)
+    # cv2.waitKey(0)
+
+    step_blue = int(900 / 12)
+    step_char7 = int((900 - step_blue) / 7)
+    step_char8 = int((900 - step_blue) / 8)
+
+    charracters_prob_straight_7 = []
+    charracters_prob_straight_8 = []
+    charracters_prob_upper_7 = []
+    charracters_prob_upper_8 = []
+    charracters_prob_lower_7 = []
+    charracters_prob_lower_8 = []
+    curr_x = step_blue
+    for i in range(7):
+        charracters_prob_straight_7.append([])
+        charracters_prob_upper_7.append([])
+        charracters_prob_lower_7.append([])
+        img1 = plate_straight[0:600, curr_x:curr_x + step_char7]
+        img2 = plate_upper[0:600, curr_x:curr_x + step_char7]
+        img3 = plate_lower[0:600, curr_x:curr_x + step_char7]
+        img1 = cv2.resize(img1, (225,150))
+        img2 = cv2.resize(img2, (225,150))
+        img3 = cv2.resize(img3, (225,150))
+        img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+        img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+        img3 = cv2.cvtColor(img3, cv2.COLOR_BGR2GRAY)
+        # cv2.imshow("first_variant", img1)
+        # cv2.imshow('second_variant', img2)
+        # cv2.imshow('third_variant', img3)
+        # cv2.waitKey(0)
+        curr_x = curr_x + step_char7         
+        for char in character_dict:
+            charracters_prob_straight_7[i].append(cv2.matchTemplate(character_dict[char], img1, cv2.TM_CCOEFF_NORMED))
+            charracters_prob_upper_7[i].append(cv2.matchTemplate(character_dict[char], img2, cv2.TM_CCOEFF_NORMED))
+            charracters_prob_lower_7[i].append(cv2.matchTemplate(character_dict[char], img3, cv2.TM_CCOEFF_NORMED))
+
+    curr_x = step_blue
+    for i in range(8):
+        charracters_prob_straight_8.append([])
+        charracters_prob_upper_8.append([])
+        charracters_prob_lower_8.append([])
+        img1 = plate_straight[0:600, curr_x:curr_x + step_char8]
+        img2 = plate_upper[0:600, curr_x:curr_x + step_char8]
+        img3 = plate_lower[0:600, curr_x:curr_x + step_char8]
+        img1 = cv2.resize(img1, (225,150))
+        img2 = cv2.resize(img2, (225,150))
+        img3 = cv2.resize(img3, (225,150))
+        img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+        img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+        img3 = cv2.cvtColor(img3, cv2.COLOR_BGR2GRAY)
+        # cv2.imshow("first_variant", img1)
+        # cv2.imshow('second_variant', img2)
+        # cv2.imshow('third_variant', img3)
+        # cv2.waitKey(0)
+        curr_x = curr_x + step_char8        
+        for char in character_dict:
+            charracters_prob_straight_8[i].append(cv2.matchTemplate(character_dict[char], img1, cv2.TM_CCOEFF_NORMED))
+            charracters_prob_upper_8[i].append(cv2.matchTemplate(character_dict[char], img2, cv2.TM_CCOEFF_NORMED))
+            charracters_prob_lower_8[i].append(cv2.matchTemplate(character_dict[char], img3, cv2.TM_CCOEFF_NORMED))
+
+
+    chars = list(character_dict.keys())
+    prob7 = []
+    prob7_chars = []    
+    max_prob = 0
+    max_prob_index = 0
+    for i in range(len(charracters_prob_straight_7)):
+        max_prob = 0
+        max_prob_index = 0
+        for j in range(len(charracters_prob_straight_7[i])):
+            if charracters_prob_straight_7[i][j] > max_prob:
+                max_prob = charracters_prob_straight_7[i][j]
+                max_prob_index = j
+        for j in range(len(charracters_prob_upper_7[i])):
+            if charracters_prob_upper_7[i][j] > max_prob:
+                max_prob = charracters_prob_upper_7[i][j]
+                max_prob_index = j
+        for j in range(len(charracters_prob_lower_7[i])):
+            if charracters_prob_lower_7[i][j] > max_prob:
+                max_prob = charracters_prob_lower_7[i][j]
+                max_prob_index = j
+        prob7.append(max_prob)
+        prob7_chars.append(chars[max_prob_index])
+    print(prob7_chars)
+
+    prob8 = []
+    prob8_chars = []
+    max_prob = 0
+    max_prob_index = 0
+    for i in range(len(charracters_prob_straight_8)):
+        max_prob = 0
+        max_prob_index = 0
+        for j in range(len(charracters_prob_straight_8[i])):
+            if charracters_prob_straight_8[i][j] > max_prob:
+                max_prob = charracters_prob_straight_8[i][j]
+                max_prob_index = j
+                max_prob_set = 0
+        for j in range(len(charracters_prob_upper_8[i])):
+            if charracters_prob_upper_8[i][j] > max_prob:
+                max_prob = charracters_prob_upper_8[i][j]
+                max_prob_index = j
+                max_prob_set = 1
+        for j in range(len(charracters_prob_lower_8[i])):
+            if charracters_prob_lower_8[i][j] > max_prob:
+                max_prob = charracters_prob_lower_8[i][j]
+                max_prob_index = j
+                max_prob_set = 2
+        prob8.append(max_prob)
+        prob8_chars.append(chars[max_prob_index])
+    print(prob8_chars)
+    cv2.imshow("og", img_og)
     cv2.waitKey(0)
+
+
     return 'PO12345'
