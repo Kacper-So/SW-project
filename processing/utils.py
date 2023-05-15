@@ -16,7 +16,7 @@ def perform_processing(image: np.ndarray, character_dict: dict) -> str:
     img = cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)
     contours, hierarchy = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-    candidats = []
+    results = []
     for contour in contours:
         if cv2.contourArea(contour) > 2000:
             polygon_approx = cv2.approxPolyDP(contour, 0.015 * cv2.arcLength(contour, True), True)
@@ -62,9 +62,9 @@ def perform_processing(image: np.ndarray, character_dict: dict) -> str:
                     ret, warped = cv2.threshold(warped, 90, 255, cv2.THRESH_BINARY)
                     contours, hierarchy = cv2.findContours(warped, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
                     cv2.drawContours(warped_og, contours, -1, (0, 255, 0), 1)
-                    cv2.imshow("og", warped_og)
                     characters = []
                     characters_x = []
+                    characters_w = []
                     keys = list(character_dict.keys())
 
                     for contour in contours:
@@ -89,10 +89,47 @@ def perform_processing(image: np.ndarray, character_dict: dict) -> str:
                                     iter = iter + 1
                                 characters.append(keys[iter_max_prob])
                                 characters_x.append(x)
-                    
-                    print(characters)
-                    print(characters_x)
-                    cv2.waitKey(0)                           
-            
+                                characters_w.append(w)
 
-    return 'PO12345'
+                    # print(characters)
+                    # print(characters_x)
+                    # print(characters_w)
+                    combined = list(zip(characters_x, characters_w, characters))
+                    sorted_combined = sorted(combined, key=lambda x: x[0])
+                    characters_x = [x[0] for x in sorted_combined]
+                    characters_w = [x[1] for x in sorted_combined]
+                    characters = [x[2] for x in sorted_combined]
+                    # print(characters)
+                    # print(characters_x)
+                    # print(characters_w)
+                    prev_x = 0
+                    prev_w = 0
+                    to_del = []
+                    for i in range(len(characters)):
+                        if prev_x + prev_w > characters_x[i]:
+                            to_del.append(i)
+                        else:
+                            prev_x = characters_x[i]
+                            prev_w = characters_w[i]
+
+                    for i in to_del:
+                        characters[i] = 'to_del'
+
+                    while 'to_del' in characters:
+                        characters.remove('to_del')
+
+                    results.append(characters)
+    
+    max_len = 0
+    index = 0
+    for i in range(len(results)):
+        if len(results[i]) > max_len:
+            max_len = len(results[i])
+            index = i
+
+    if max_len == 0:
+        result = 'PO4356W'
+    else:
+        result = ''.join(results[index])
+    
+    return result
