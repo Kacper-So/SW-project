@@ -17,14 +17,26 @@ def main():
     part_height = height // 5
     part_width = (width - (7 * char_spaceing)) // 8
     char_img_parts = []
+    curr_y = 30
+    char_height = 100
     for i in range(5):
         incremental_char_spaceing = 0
         for j in range(8):
-            part = img[i * part_height:(i + 1) * part_height, incremental_char_spaceing + (j * part_width):incremental_char_spaceing + ((j + 1) * part_width)]
-            part = cv2.resize(part, (225,150))
+            part = img[curr_y:curr_y + char_height, incremental_char_spaceing + (j * part_width):incremental_char_spaceing + ((j + 1) * part_width)]
+            part = cv2.resize(part, (136,225))
             part = cv2.cvtColor(part, cv2.COLOR_BGR2GRAY)
+            ret, part = cv2.threshold(part, 127, 255, cv2.THRESH_BINARY)
+            contours, hierarchy = cv2.findContours(part, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            if len(contours) > 1:
+                max_contour = contours[1]
+            else:
+                max_contour = contours[0]
+            x, y, w, h = cv2.boundingRect(max_contour)
+            part = part[y:y+h, x:x+w]
+            part = cv2.resize(part, (136,225))
             char_img_parts.append(part)
             incremental_char_spaceing = incremental_char_spaceing + char_spaceing
+        curr_y = curr_y + 80 + char_height
 
     characters_dict = {}
     for i in range(len(characters)):
