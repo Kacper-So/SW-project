@@ -8,6 +8,7 @@ def perform_processing(image: np.ndarray, character_dict: dict) -> str:
     # TODO: add image processing here
     #processing and contours finding
     img = cv2.resize(image, (800, 600))
+    cv2.imshow('photo', img)
     img_og = img.copy()
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     img = cv2.GaussianBlur(img, (3, 3), 0)
@@ -51,17 +52,21 @@ def perform_processing(image: np.ndarray, character_dict: dict) -> str:
                     plate_width = math.sqrt((pow(lower_left[0], 2) - pow(upper_left[0], 2)) + (pow(lower_left[1], 2) - pow(upper_left[1], 2)))
                 ratio = plate_lenght/ plate_width
                 if ratio > 2 and ratio < 5:
-                    src = np.float32([[upper_left[0] - 5, upper_left[1] - 5], [upper_right[0] + 5, upper_right[1] - 5], [lower_left[0] - 5, lower_left[1] + 5], [lower_right[0] + 5, lower_right[1] + 5]])
+                    src = np.float32([[upper_left[0] - 6, upper_left[1] - 6], [upper_right[0] + 6, upper_right[1] - 6], [lower_left[0] - 6, lower_left[1] + 6], [lower_right[0] + 6, lower_right[1] + 6]])
                     dst = np.float32([[0, 0], [1040, 0], [0, 224], [1040, 224]])
                     M = cv2.getPerspectiveTransform(src, dst)
                     warped = cv2.warpPerspective(img_og, M, (1040, 224))
                     warped_og = warped.copy()
                     warped = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
                     warped = cv2.GaussianBlur(warped, (3, 3), 0)
-                    warped = cv2.morphologyEx(warped, cv2.MORPH_OPEN, kernel)
                     ret, warped = cv2.threshold(warped, 90, 255, cv2.THRESH_BINARY)
+                    warped = cv2.Canny(warped, 100, 200)
+                    warped = cv2.morphologyEx(warped, cv2.MORPH_CLOSE, kernel, iterations=2)
                     contours, hierarchy = cv2.findContours(warped, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
                     cv2.drawContours(warped_og, contours, -1, (0, 255, 0), 1)
+                    cv2.imshow('xd', warped_og)
+                    cv2.waitKey(0)
+
                     characters = []
                     characters_x = []
                     characters_w = []
@@ -71,12 +76,16 @@ def perform_processing(image: np.ndarray, character_dict: dict) -> str:
                         characters_prob = []
                         if cv2.contourArea(contour) > 3000:
                             x,y,w,h = cv2.boundingRect(contour)
-                            if h / w > 1.4 and h / w < 5:
+                            if h / w > 1.2 and h / w < 5 and h > 0.5 * 224:
                                 char_img = warped_og[y:y+h, x:x+w]
                                 char_img = cv2.resize(char_img, (136,225))
+                                char_img = cv2.GaussianBlur(char_img, (3, 3), 0)
                                 img_og2 = char_img.copy()
                                 char_img = cv2.cvtColor(char_img, cv2.COLOR_BGR2GRAY)
-                                ret, char_img = cv2.threshold(char_img, 127, 255, cv2.THRESH_BINARY)
+                                ret, char_img = cv2.threshold(char_img, 95, 255, cv2.THRESH_BINARY)
+                                char_img = cv2.morphologyEx(char_img, cv2.MORPH_OPEN, kernel, iterations=2)
+                                # cv2.imshow('xd2',char_img)
+                                # cv2.waitKey(0)
                                 for char in character_dict:
                                     characters_prob.append(cv2.matchTemplate(character_dict[char], char_img, cv2.TM_CCOEFF_NORMED))
                                 max_prob = 0
@@ -99,7 +108,7 @@ def perform_processing(image: np.ndarray, character_dict: dict) -> str:
                     characters_x = [x[0] for x in sorted_combined]
                     characters_w = [x[1] for x in sorted_combined]
                     characters = [x[2] for x in sorted_combined]
-                    # print(characters)
+                    print(characters)
                     # print(characters_x)
                     # print(characters_w)
                     prev_x = 0
@@ -131,5 +140,8 @@ def perform_processing(image: np.ndarray, character_dict: dict) -> str:
         result = 'PO4356W'
     else:
         result = ''.join(results[index])
+
+    print(result)
+    cv2.waitKey(0)
     
     return result
