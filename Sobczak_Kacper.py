@@ -61,6 +61,8 @@ def main():
             continue
 
         results[image_path.name] = perform_processing(image, characters_dict)
+        # if results[image_path.name] == '':
+        #     results[image_path.name] = perform_processing2(image, characters_dict)
 
     with results_file.open('w') as output_file:
         json.dump(results, output_file, indent=4)

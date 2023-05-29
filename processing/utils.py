@@ -1,14 +1,14 @@
 import numpy as np
 import cv2
-import imutils
 import math
 
+
 def perform_processing(image: np.ndarray, character_dict: dict) -> str:
-    print(f'image.shape: {image.shape}')
+    # print(f'image.shape: {image.shape}')
     # TODO: add image processing here
     #processing and contours finding
     img = cv2.resize(image, (800, 600))
-    cv2.imshow('photo', img)
+    # cv2.imshow('photo', img)
     img_og = img.copy()
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     img = cv2.GaussianBlur(img, (3, 3), 0)
@@ -23,6 +23,9 @@ def perform_processing(image: np.ndarray, character_dict: dict) -> str:
             polygon_approx = cv2.approxPolyDP(contour, 0.015 * cv2.arcLength(contour, True), True)
             if len(polygon_approx) == 4:
                 ratio = 0
+            polygon_approx = cv2.approxPolyDP(contour, 0.015 * cv2.arcLength(contour, True), True)
+            if len(polygon_approx) == 4:
+                ratio = 0
                 left_x = min([polygon_approx[0][0][0], polygon_approx[1][0][0], polygon_approx[2][0][0], polygon_approx[3][0][0]])
                 right_x = max([polygon_approx[0][0][0], polygon_approx[1][0][0], polygon_approx[2][0][0], polygon_approx[3][0][0]])
                 mid_x_th = left_x + (right_x - left_x) / 2
@@ -33,15 +36,35 @@ def perform_processing(image: np.ndarray, character_dict: dict) -> str:
                 upper_right = [1, 1]
                 lower_left = [1, 1]
                 lower_right = [1, 1]
+                point_taken = []
                 for point in polygon_approx:
-                    if point[0][0] < mid_x_th and point[0][1] < mid_y_th:
+                    if point[0][0] < mid_x_th and point[0][1] < mid_y_th and upper_left[0] == 1 and upper_left[1] == 1:
                         upper_left = point[0]
-                    if point[0][0] > mid_x_th and point[0][1] < mid_y_th:
+                        point_taken.append(1)
+                    elif point[0][0] > mid_x_th and point[0][1] < mid_y_th and upper_right[0] == 1 and upper_right[1] == 1:
                         upper_right = point[0]
-                    if point[0][0] < mid_x_th and point[0][1] > mid_y_th:
+                        point_taken.append(1)
+                    elif point[0][0] < mid_x_th and point[0][1] > mid_y_th and lower_left[0] == 1 and lower_left[1] == 1:
                         lower_left = point[0]
-                    if point[0][0] > mid_x_th and point[0][1] > mid_y_th:
+                        point_taken.append(1)
+                    elif point[0][0] > mid_x_th and point[0][1] > mid_y_th and lower_right[0] == 1 and lower_right[1] == 1:
                         lower_right = point[0]
+                        point_taken.append(1)
+                    else:
+                        point_taken.append(0)
+
+                for i in range(len(point_taken)):
+                    if point_taken[i] == 0:
+                        missing = polygon_approx[i]
+                        if upper_left[0] == 1:
+                            upper_left = missing[0]
+                        if upper_right[0] == 1:
+                            upper_right = missing[0]
+                        if lower_left[0] == 1:
+                            lower_left = missing[0]
+                        if lower_right[0] == 1:
+                            lower_right = missing[0]
+                
                 if (pow(upper_right[0], 2) - pow(upper_left[0], 2)) + (pow(upper_right[1], 2) - pow(upper_left[1], 2)) <= 0:
                     plate_lenght = 1
                 else:
@@ -51,7 +74,7 @@ def perform_processing(image: np.ndarray, character_dict: dict) -> str:
                 else:
                     plate_width = math.sqrt((pow(lower_left[0], 2) - pow(upper_left[0], 2)) + (pow(lower_left[1], 2) - pow(upper_left[1], 2)))
                 ratio = plate_lenght/ plate_width
-                if ratio > 2 and ratio < 5:
+                if ratio > 1.9 and ratio < 5:
                     src = np.float32([[upper_left[0] - 6, upper_left[1] - 6], [upper_right[0] + 6, upper_right[1] - 6], [lower_left[0] - 6, lower_left[1] + 6], [lower_right[0] + 6, lower_right[1] + 6]])
                     dst = np.float32([[0, 0], [1040, 0], [0, 224], [1040, 224]])
                     M = cv2.getPerspectiveTransform(src, dst)
@@ -63,9 +86,9 @@ def perform_processing(image: np.ndarray, character_dict: dict) -> str:
                     warped = cv2.Canny(warped, 100, 200)
                     warped = cv2.morphologyEx(warped, cv2.MORPH_CLOSE, kernel, iterations=2)
                     contours, hierarchy = cv2.findContours(warped, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-                    cv2.drawContours(warped_og, contours, -1, (0, 255, 0), 1)
-                    cv2.imshow('xd', warped_og)
-                    cv2.waitKey(0)
+                    # cv2.drawContours(warped_og, contours, -1, (0, 255, 0), 1)
+                    # cv2.imshow('xd', warped_og)
+                    # cv2.waitKey(0)
 
                     characters = []
                     characters_x = []
@@ -84,8 +107,6 @@ def perform_processing(image: np.ndarray, character_dict: dict) -> str:
                                 char_img = cv2.cvtColor(char_img, cv2.COLOR_BGR2GRAY)
                                 ret, char_img = cv2.threshold(char_img, 95, 255, cv2.THRESH_BINARY)
                                 char_img = cv2.morphologyEx(char_img, cv2.MORPH_OPEN, kernel, iterations=2)
-                                # cv2.imshow('xd2',char_img)
-                                # cv2.waitKey(0)
                                 for char in character_dict:
                                     characters_prob.append(cv2.matchTemplate(character_dict[char], char_img, cv2.TM_CCOEFF_NORMED))
                                 max_prob = 0
@@ -108,7 +129,7 @@ def perform_processing(image: np.ndarray, character_dict: dict) -> str:
                     characters_x = [x[0] for x in sorted_combined]
                     characters_w = [x[1] for x in sorted_combined]
                     characters = [x[2] for x in sorted_combined]
-                    print(characters)
+                    # print(characters)
                     # print(characters_x)
                     # print(characters_w)
                     prev_x = 0
@@ -137,11 +158,11 @@ def perform_processing(image: np.ndarray, character_dict: dict) -> str:
             index = i
 
     if max_len == 0:
-        result = 'PO4356W'
+        result = ''
     else:
         result = ''.join(results[index])
 
-    print(result)
-    cv2.waitKey(0)
+    # print(result)
+    # cv2.waitKey(0)
     
     return result
